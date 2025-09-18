@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>Octahedron ☌ Light‑Ledger Trading Lab</title>
+<style>
+  :root{--bg:#0b0f14;--card:#111823;--ink:#e6eef7;--muted:#9fb2c7;--accent:#6ee7ff;--good:#5ee391;--bad:#ff7a7a;--grid:#233247;}
+  *{box-sizing:border-box} body{margin:0;font:16px/1.45 system-ui,Segoe UI,Roboto,Helvetica,Arial;background:var(--bg);color:var(--ink)}
+  header{padding:16px 20px;border-bottom:1px solid var(--grid);display:flex;align-items:center;gap:12px}
+  header h1{margin:0;font-size:18px;font-weight:700;letter-spacing:.2px}
+  main{padding:18px;display:grid;grid-template-columns:1fr 1fr;gap:18px}
+  .card{background:var(--card);border:1px solid var(--grid);border-radius:14px;padding:14px;box-shadow:0 6px 24px rgba(0,0,0,.25)}
+  h2{margin:4px 0 10px 0;font-size:16px}
+  label{font-size:12px;color:var(--muted)}
+  input,textarea,select{width:100%;padding:8px 10px;border:1px solid var(--grid);border-radius:10px;background:#0d141e;color:var(--ink)}
+  textarea{min-height:84px;resize:vertical}
+  .row{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin:8px 0}
+  .row2{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin:8px 0}
+  .pill{display:inline-flex;align-items:center;gap:6px;padding:6px 10px;border-radius:999px;border:1px solid var(--grid);color:var(--muted);margin:6px 6px 0 0;font-size:12px}
+  .pill input{width:auto}
+  table{width:100%;border-collapse:collapse;margin-top:10px}
+  th,td{padding:8px 10px;border-bottom:1px solid var(--grid);font-size:14px}
+  th{color:var(--muted);text-align:left}
+  td.num{text-align:right}
+  .k-good{color:var(--good)} .k-bad{color:var(--bad)}
+  .btn{cursor:pointer;background:#0f1b2a;border:1px solid var(--grid);padding:10px 12px;border-radius:10px;color:var(--ink);font-weight:600}
+  .btn:hover{border-color:#35506f}
+  .foot{color:var(--muted);font-size:12px;margin-top:8px}
+  .grid13{display:grid;grid-template-columns:repeat(13,1fr);gap:6px}
+  .chip{border:1px dashed var(--grid);border-radius:10px;padding:6px 8px;text-align:center;font-size:12px;color:var(--muted)}
+  .flex{display:flex;gap:10px;flex-wrap:wrap}
+</style>
+</head>
+<body>
+<header>
+  <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
+    <path d="M12 2l6.6 3.8v7.6L12 18l-6.6-4.6V5.8L12 2z" stroke="var(--accent)" stroke-width="1.2"/>
+    <circle cx="12" cy="12" r="2.4" stroke="var(--accent)" stroke-width="1.2"/>
+  </svg>
+  <h1>Octahedron ☌ Light‑Ledger Trading Lab</h1>
+</header>
+
+<main>
+  <section class="card">
+    <h2>1) Inputs — Market & Option</h2>
+    <div class="row2">
+      <div><label>Spot price S₀ (₹)</label><input id="spot" type="number" value="100" step="0.01"></div>
+      <div><label>Move step (±%) for Up/Down</label><input id="step" type="number" value="5" step="0.1"></div>
+    </div>
+    <div class="row2">
+      <div><label>Put strike K (₹)</label><input id="strike" type="number" value="100" step="0.01"></div>
+      <div><label>Put premium (₹)</label><input id="prem" type="number" value="5" step="0.01"></div>
+    </div>
+    <div class="row2">
+      <div><label>Neutral window (±%) around flat</label><input id="flatwin" type="number" value="0.2" step="0.1"></div>
+      <div><label>Bars lookback for phase counts</label><input id="lookback" type="number" value="130" step="1"></div>
+    </div>
+    <button class="btn" onclick="compute()">Compute EV</button>
+    <div class="foot">EV = expected value = Σ(probability × payoff). All probabilities come from your Light‑Ledger phase residues.</div>
+  </section>
+
+  <section class="card">
+    <h2>2) Light‑Ledger Probabilities (13‑Residue Engine)</h2>
+    <div class="row2">
+      <div>
+        <label>Paste residues (0–12) separated by space/comma/newline</label>
+        <textarea id="residues" placeholder="e.g. 10 11 11 3 4 12 6 10 5 11 12 10 3"></textarea>
+      </div>
+      <div>
+        <label>Residue sets</label>
+        <div class="flex">
+          <span class="pill"><input id="bullset" type="text" value="10,11,12"> Bullish</span>
+          <span class="pill"><input id="bearset" type="text" value="3,4,5"> Bearish</span>
+        </div>
+        <div style="margin-top:6px">
+          <button class="btn" onclick="countResidues()">Count residues → Probabilities</button>
+        </div>
+        <div id="counts" class="foot" style="margin-top:8px"></div>
+        <div class="grid13" style="margin-top:10px">
+          <div class="chip">k=0</div><div class="chip">1</div><div class="chip">2</div><div class="chip">3</div><div class="chip">4</div><div class="chip">5</div><div class="chip">6</div><div class="chip">7</div><div class="chip">8</div><div class="chip">9</div><div class="chip">10</div><div class="chip">11</div><div class="chip">12</div>
+        </div>
+      </div>
+    </div>
+    <div style="margin-top:8px">
+      <label>Or override directly:</label>
+      <div class="row">
+        <div><label>P(Down)</label><input id="pdown" type="number" step="0.001" min="0" max="1" value=""></div>
+        <div><label>P(Flat)</label><input id="pflat" type="number" step="0.001" min="0" max="1" value=""></div>
+        <div><label>P(Up)</label><input id="pup" type="number" step="0.001" min="0" max="1" value=""></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="card" style="grid-column: span 2;">
+    <h2>3) Payoffs & Expected Values</h2>
+    <table id="paytab">
+      <thead>
+        <tr>
+          <th>Scenario</th><th>End Price</th><th>Daily (Long 1)</th><th>Short (Short 1)</th><th>Put (K, premium)</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+
+    <table style="margin-top:16px">
+      <thead><tr><th>Strategy</th><th class="num">EV (₹)</th></tr></thead>
+      <tbody id="evbody"></tbody>
+    </table>
+    <div class="foot">Neutral window determines which prices count as “flat” when converting continuous moves into the three buckets.</div>
+  </section>
+
+  <section class="card">
+    <h2>4) Octahedron MMV+T Snapshot</h2>
+    <div class="foot">Use these as qualitative checks. If they disagree sharply, reduce size.</div>
+    <div class="row2">
+      <div><label>Depth mass M (0–1)</label><input id="massM" type="number" min="0" max="1" step="0.01" value="0.6"></div>
+      <div><label>Drift momentum N (−1..1)</label><input id="momN" type="number" min="-1" max="1" step="0.01" value="0.2"></div>
+    </div>
+    <div class="row2">
+      <div><label>Velocity V (σ, 0–1)</label><input id="velV" type="number" min="0" max="1" step="0.01" value="0.4"></div>
+      <div><label>Time window T (bars)</label><input id="timeT" type="number" min="1" step="1" value="13"></div>
+    </div>
+    <button class="btn" onclick="checkCoherence()">Check coherence</button>
+    <div id="coh" class="foot" style="margin-top:8px"></div>
+  </section>
+
+  <section class="card">
+    <h2>5) Notes — How probabilities are built</h2>
+    <ol style="margin:6px 0 0 18px;color:var(--muted)">
+      <li>Compute analytic phase ϕ(t) of a base series (price/flow/E= N+V+T).</li>
+      <li>Map ϕ to residues k ∈ {0..12} via k = floor(13·wrap(ϕ)/(2π)).</li>
+      <li>Choose residue sets as Bullish/Bearish; the rest is Neutral.</li>
+      <li>Probabilities are relative frequencies over the lookback window.</li>
+      <li>EV = Σ P(state) × payoff(state) across Down/Flat/Up.</li>
+    </ol>
+  </section>
+</main>
+
+<script>
+function parseSet(txt){
+  return new Set(txt.split(/[^0-9]+/).filter(s=>s!=="" ).map(x=>+x));
+}
+function countResidues(){
+  const raw = document.getElementById('residues').value.trim();
+  const bulls = parseSet(document.getElementById('bullset').value);
+  const bears = parseSet(document.getElementById('bearset').value);
+  if(!raw){ document.getElementById('counts').innerText = "Paste residues to compute probabilities."; return; }
+  const arr = raw.split(/[^0-9]+/).filter(s=>s!=="").map(x=>+x).filter(k=>k>=0 && k<=12);
+  const L = arr.length;
+  if(L===0){ document.getElementById('counts').innerText = "No valid residues found."; return; }
+  let cb=0, cr=0;
+  for(const k of arr){ if(bulls.has(k)) cb++; else if(bears.has(k)) cr++; }
+  const pu = cb/L, pd = cr/L, pf = 1 - pu - pd;
+  document.getElementById('pup').value = pu.toFixed(3);
+  document.getElementById('pdown').value = pd.toFixed(3);
+  document.getElementById('pflat').value = Math.max(0, pf).toFixed(3);
+  document.getElementById('counts').innerText = `Counts → Bullish: ${cb}, Bearish: ${cr}, Neutral: ${L-cb-cr} | Total: ${L}`;
+}
+function payoffDaily(S0,S1){ return +(S1 - S0).toFixed(2); }
+function payoffShort(S0,S1){ return +(S0 - S1).toFixed(2); }
+function payoffPut(K,prem,S1){ return +((Math.max(K - S1,0) - prem).toFixed(2)); }
+function compute(){
+  const S0 = +document.getElementById('spot').value;
+  const step = +document.getElementById('step').value / 100.0;
+  const K = +document.getElementById('strike').value;
+  const prem = +document.getElementById('prem').value;
+  const flatwin = +document.getElementById('flatwin').value / 100.0;
+
+  let pd = parseFloat(document.getElementById('pdown').value);
+  let pf = parseFloat(document.getElementById('pflat').value);
+  let pu = parseFloat(document.getElementById('pup').value);
+
+  if(isNaN(pd) || isNaN(pf) || isNaN(pu)){
+    document.getElementById('counts').innerText = "Set probabilities via residue counts or direct override.";
+    return;
+  }
+  const sum = pd + pf + pu;
+  if(Math.abs(sum - 1) > 1e-6){
+    pd /= sum; pf /= sum; pu /= sum; // normalize
+  }
+
+  const Sd = +(S0 * (1 - step)).toFixed(2);
+  const Su = +(S0 * (1 + step)).toFixed(2);
+  const SfLo = +(S0 * (1 - flatwin)).toFixed(2);
+  const SfHi = +(S0 * (1 + flatwin)).toFixed(2);
+
+  const dDaily = payoffDaily(S0, Sd);
+  const uDaily = payoffDaily(S0, Su);
+  const dShort = payoffShort(S0, Sd);
+  const uShort = payoffShort(S0, Su);
+  const dPut = payoffPut(K, prem, Sd);
+  const uPut = payoffPut(K, prem, Su);
+  const fPut = payoffPut(K, prem, S0);
+
+  const tb = document.querySelector('#paytab tbody');
+  tb.innerHTML = `
+    <tr><td>Down</td><td class="num">₹${Sd}</td><td class="num">${fmt(dDaily)}</td><td class="num">${fmt(dShort)}</td><td class="num">${fmt(dPut)}</td></tr>
+    <tr><td>Flat (${SfLo}..${SfHi})</td><td class="num">₹${S0.toFixed(2)}</td><td class="num">₹0.00</td><td class="num">₹0.00</td><td class="num">${fmt(fPut)}</td></tr>
+    <tr><td>Up</td><td class="num">₹${Su}</td><td class="num">${fmt(uDaily)}</td><td class="num">${fmt(uShort)}</td><td class="num">${fmt(uPut)}</td></tr>
+  `;
+
+  const EVdaily = pd*dDaily + pf*0 + pu*uDaily;
+  const EVshort = pd*dShort + pf*0 + pu*uShort;
+  const EVput   = pd*dPut   + pf*fPut + pu*uPut;
+
+  const evb = document.getElementById('evbody');
+  evb.innerHTML = `
+    <tr><td>Daily (Long 1)</td><td class="num ${EVdaily>=0?'k-good':'k-bad'}">${fmt(EVdaily)}</td></tr>
+    <tr><td>Short (Short 1)</td><td class="num ${EVshort>=0?'k-good':'k-bad'}">${fmt(EVshort)}</td></tr>
+    <tr><td>Put (K=${K}, premium=${prem})</td><td class="num ${EVput>=0?'k-good':'k-bad'}">${fmt(EVput)}</td></tr>
+  `;
+}
+function fmt(x){
+  const v = +x;
+  const s = (v>=0?'+':'−');
+  const a = Math.abs(v).toFixed(2);
+  return (v===0? '₹0.00' : (s==='+'? '₹'+a : '−₹'+a));
+}
+function checkCoherence(){
+  // Implements your four equations qualitatively and reports residuals
+  const M = +document.getElementById('massM').value;
+  const N = +document.getElementById('momN').value;
+  const V = +document.getElementById('velV').value;
+  const T = +document.getElementById('timeT').value;
+
+  // Normalize T for residual math
+  const Tn = T/13.0;
+
+  const r1 = M - (N + Tn);
+  const E  = N + V + Tn;
+  const r3 = N - (M + V + Tn);
+  const r4 = V - (M + N + Tn);
+
+  const msg = `Residuals → r1: ${r1.toFixed(3)}, r3: ${r3.toFixed(3)}, r4: ${r4.toFixed(3)} | Energy event E = ${E.toFixed(3)}. 
+Interpretation: |residual| < 0.1 ⇒ coherent; 0.1–0.3 ⇒ caution; >0.3 ⇒ avoid or reduce size.`;
+  document.getElementById('coh').innerText = msg;
+}
+</script>
+</body>
+</html>
